@@ -1,220 +1,426 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
-<meta name="theme-color" content="#111111"/>
-<meta name="mobile-web-app-capable" content="yes"/>
-<meta name="apple-mobile-web-app-capable" content="yes"/>
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<meta name="apple-mobile-web-app-title" content="NAV Tracker"/>
-<title>NAV Tracker</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Pro NAV Dashboard</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
   :root {
-    --bg: #0e0e12; --card: #16161c; --border: #222230;
-    --text: #e8e8f0; --muted: #666680; --up: #00c97a; --down: #ff4d6a;
-    --accent: #7c6fff; --high-bg: #0a2618; --low-bg: #250a10;
+    --bg: #0b0f19; --surface: #151a28; --border: #2a3143;
+    --text: #e2e8f0; --muted: #94a3b8; 
+    --up: #10b981; --down: #ef4444; --accent: #3b82f6;
+    --high-bg: rgba(16, 185, 129, 0.15);
+    --low-bg: rgba(239, 68, 68, 0.15);
   }
-  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-  body { background: var(--bg); font-family: 'IBM Plex Sans', sans-serif; color: var(--text); overscroll-behavior: none; }
-
-  .topbar {
+  
+  body { 
+    background: var(--bg); color: var(--text); 
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+    margin: 0; padding: 0; line-height: 1.5; overflow-x: hidden;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  
+  /* Header */
+  .header {
     position: sticky; top: 0; z-index: 100;
-    background: rgba(14,14,18,0.92); backdrop-filter: blur(12px);
+    background: rgba(11, 15, 25, 0.9); backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--border);
-    padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;
+    padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;
   }
-  .topbar-title { font-size: 15px; font-weight: 700; }
-  .refresh-btn {
-    background: var(--accent); color: #fff; border: none;
-    border-radius: 7px; padding: 6px 13px; font-size: 12px;
-    font-weight: 600; cursor: pointer;
+  .title { margin: 0; font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  .pulse { width: 8px; height: 8px; background: var(--up); border-radius: 50%; box-shadow: 0 0 8px var(--up); animation: blink 2s infinite; }
+  @keyframes blink { 0% {opacity: 1;} 50% {opacity: 0.4;} 100% {opacity: 1;} }
+  
+  .controls { display: flex; align-items: center; gap: 12px; }
+  .timer { font-size: 11px; color: var(--muted); font-family: monospace; }
+  .btn { 
+    background: var(--accent); color: white; border: none; 
+    padding: 8px 16px; border-radius: 8px; cursor: pointer; 
+    font-size: 13px; font-weight: 600; transition: background 0.2s;
   }
-  .last-updated { font-size: 10px; color: var(--muted); margin-right: 10px; }
+  .btn:active { background: #2563eb; }
 
-  .tabs-wrap { overflow-x: auto; padding: 12px 16px 0; }
-  .tabs { display: flex; gap: 7px; min-width: max-content; padding-bottom: 12px; }
-  .tab-btn {
-    padding: 7px 14px; border: 1px solid var(--border); border-radius: 20px;
-    background: var(--card); font-size: 12px; font-weight: 600;
-    cursor: pointer; color: var(--muted);
+  /* Search Bar */
+  .search-container { position: relative; padding: 20px 20px 0; }
+  .search-input { 
+    width: 100%; background: var(--surface); border: 1px solid var(--border); 
+    color: var(--text); padding: 14px 16px 14px 40px; border-radius: 12px; 
+    font-size: 14px; outline: none; transition: border-color 0.2s; 
   }
-  .tab-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-
-  .panel { display: none; padding: 14px 16px 32px; }
-  .panel.active { display: block; }
-
-  .summary-card {
-    background: var(--card); border: 1px solid var(--border);
-    border-radius: 14px; padding: 16px; margin-bottom: 16px;
+  .search-input:focus { border-color: var(--accent); }
+  .search-icon { position: absolute; left: 34px; top: 34px; color: var(--muted); }
+  .search-results { 
+    position: absolute; top: calc(100% - 4px); left: 20px; right: 20px; 
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px; 
+    max-height: 250px; overflow-y: auto; z-index: 200; display: none; 
+    box-shadow: 0 10px 30px rgba(0,0,0,0.6); 
   }
-  .sc-name { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
-  .sc-cat { font-size: 10px; color: var(--muted); text-transform: uppercase; margin-bottom: 14px; }
-  .sc-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-  .sc-label { font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 3px; }
-  .sc-val { font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 600; }
-  .sc-stats-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+  .search-results.active { display: block; }
+  .search-item { padding: 12px 16px; font-size: 12px; border-bottom: 1px solid var(--border); cursor: pointer; color: var(--text); }
+  .search-item:last-child { border-bottom: none; }
+  .search-item:hover { background: rgba(255,255,255,0.05); color: var(--accent); }
+
+  /* Dashboard Grid */
+  .dashboard { padding: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; }
+  
+  /* Mini Cards */
+  .card { 
+    background: var(--surface); border: 1px solid var(--border); 
+    border-radius: 16px; padding: 16px; cursor: pointer; 
+    transition: transform 0.2s, border-color 0.2s; position: relative;
+  }
+  .card:active { transform: scale(0.97); border-color: var(--accent); }
+  .card-name { font-size: 13px; font-weight: 600; margin: 0 0 12px 0; line-height: 1.3; color: var(--muted); height: 34px; overflow: hidden; }
+  .card-nav { font-size: 20px; font-weight: 700; font-family: monospace; color: #fff; margin-bottom: 4px; }
+  .card-change { font-size: 11px; font-weight: 600; font-family: sans-serif; }
+  .close-btn { 
+    position: absolute; top: 8px; right: 8px; background: rgba(239, 68, 68, 0.15); 
+    color: var(--down); border: none; width: 24px; height: 24px; border-radius: 6px; 
+    display: flex; align-items: center; justify-content: center; 
+    font-size: 14px; cursor: pointer; z-index: 10;
+  }
+  .close-btn:hover { background: var(--down); color: #fff; }
+
+  /* Bottom Sheet / Modal */
+  .sheet-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+    z-index: 999; display: none; opacity: 0; transition: opacity 0.3s;
+  }
+  .sheet {
+    position: fixed; bottom: -100%; left: 0; right: 0;
+    background: var(--bg); border-radius: 24px 24px 0 0;
+    z-index: 1000; height: 90vh; display: flex; flex-direction: column;
+    transition: bottom 0.3s cubic-bezier(0.1, 0.8, 0.2, 1);
+    box-shadow: 0 -10px 40px rgba(0,0,0,0.8); border-top: 1px solid var(--border);
+  }
+  .sheet.active { bottom: 0; }
+  .sheet-overlay.active { display: block; opacity: 1; }
+  
+  .sheet-header { padding: 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: flex-start; }
+  .sheet-title { font-size: 18px; font-weight: 700; margin: 0; color: #fff; line-height: 1.3; padding-right: 20px; }
+  .sheet-close { background: none; border: none; color: var(--muted); font-size: 24px; cursor: pointer; line-height: 1; padding: 0; }
+  
+  .sheet-content { padding: 20px; overflow-y: auto; flex: 1; }
+  
+  /* Section Titles inside Sheet */
+  .section-title { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin: 0 0 12px 0; font-weight: 700; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+
+  /* Metrics Grid */
+  .metrics-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 24px; }
+  .m-box { background: var(--surface); border: 1px solid var(--border); padding: 12px; border-radius: 12px; }
+  .m-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .m-val { font-size: 13px; font-weight: 700; color: #fff; margin-top: 4px; font-family: monospace; }
+  .m-val.highlight { color: var(--accent); }
+
+  /* Table */
+  .table-container { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 30px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { background: #1a2035; padding: 12px 16px; text-align: left; color: var(--muted); font-size: 10px; text-transform: uppercase; border-bottom: 1px solid var(--border); }
+  td { padding: 12px 16px; border-bottom: 1px solid var(--border); font-family: monospace; }
+  th:not(:first-child), td:not(:first-child) { text-align: right; }
+  
+  .row-high { background: var(--high-bg); }
+  .row-low { background: var(--low-bg); }
+  .badge { padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 700; margin-left: 6px; font-family: sans-serif; }
+  .badge-high { background: var(--up); color: #000; }
+  .badge-low { background: var(--down); color: #fff; }
 
   .up { color: var(--up); } .down { color: var(--down); }
-
-  .table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
-  table { width: 100%; border-collapse: collapse; }
-  th { padding: 10px 12px; text-align: left; font-size: 9px; color: var(--muted); text-transform: uppercase; background: #1a1a24; }
-  th:not(:first-child) { text-align: right; }
-  td { padding: 9px 12px; font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; border-bottom: 1px solid var(--border); }
-  td:not(:first-child) { text-align: right; }
-  .row-high { background: var(--high-bg); }
-  .row-low  { background: var(--low-bg); }
-
-  .badge { display: inline-block; padding: 1px 5px; border-radius: 3px; font-size: 10px; font-weight: 600; }
-  .badge-up   { background: rgba(0,201,122,0.15); color: var(--up); }
-  .badge-down { background: rgba(255,77,106,0.15); color: var(--down); }
-  .badge-neu  { background: rgba(255,255,255,0.06); color: var(--muted); }
-
-  .hl-tag { display: inline-block; margin-left: 4px; padding: 1px 5px; border-radius: 3px; font-size: 9px; font-weight: 700; vertical-align: middle; color: #000; }
-  .hl-high { background: var(--up); }
-  .hl-low  { background: var(--down); color: #fff; }
-
-  .loading-wrap { text-align: center; padding: 60px 20px; color: var(--muted); }
-  .spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 14px; }
-  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-msg { text-align: center; padding: 40px; color: var(--muted); font-size: 14px; }
 </style>
 </head>
 <body>
 
-<div class="topbar">
-  <div class="topbar-title">📊 NAV Tracker</div>
-  <div style="display:flex; align-items:center;">
-    <div class="last-updated" id="lastUpdated">–</div>
-    <button class="refresh-btn" onclick="loadAll()">↻ Refresh</button>
+  <div class="header">
+    <div class="title"><div class="pulse"></div> Portfolio</div>
+    <div class="controls">
+      <div class="timer" id="timerDisplay">Wait...</div>
+      <button class="btn" onclick="manualRefresh()">Refresh</button>
+    </div>
   </div>
-</div>
 
-<div class="tabs-wrap"><div class="tabs" id="tabs"></div></div>
-<div id="panels"></div>
+  <div class="search-container">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="searchInput" class="search-input" placeholder="Search any Mutual Fund..." autocomplete="off">
+    <div id="searchResults" class="search-results"></div>
+  </div>
 
-<script>
-const PROXY = (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+  <div class="dashboard" id="dashboard">
+    <div class="loading-msg" style="grid-column: 1/-1;">Loading your portfolio...</div>
+  </div>
 
-const FUNDS = [
-  { id:"bandhan",   name:"Bandhan Small Cap",          fullName:"Bandhan Small Cap Fund",              cat:"Small Cap · Direct Growth",                    code:"118390" },
-  { id:"edelweiss", name:"Edelweiss G&S",               fullName:"Edelweiss Gold & Silver ETF FoF",       cat:"Gold & Silver FoF · Direct Growth",            code:"147715" },
-  { id:"motilal",   name:"MO Midcap",                   fullName:"Motilal Oswal Midcap Fund",             cat:"Mid Cap · Direct Growth",                      code:"120503" },
-  { id:"hdfc",      name:"HDFC Flexi",                  fullName:"HDFC Flexi Cap Fund",                   cat:"Flexi Cap · Direct Growth",                    code:"119533" },
-  { id:"ppfas",     name:"PPFAS Flexi",                 fullName:"Parag Parikh Flexi Cap Fund",           cat:"Flexi Cap · Direct Growth",                    code:"122639" },
-  { id:"icici",     name:"ICICI Value",                 fullName:"ICICI Pru Value Discovery Fund",        cat:"Value Fund · Direct Growth",                   code:"120505" },
-];
-
-// Initialize Tabs
-const tabsEl = document.getElementById('tabs');
-const panelsEl = document.getElementById('panels');
-FUNDS.forEach((f, i) => {
-  const btn = document.createElement('button');
-  btn.className = 'tab-btn' + (i === 0 ? ' active' : '');
-  btn.textContent = f.name;
-  btn.onclick = () => {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById('panel-' + f.id).classList.add('active');
-  };
-  tabsEl.appendChild(btn);
-
-  const panel = document.createElement('div');
-  panel.className = 'panel' + (i === 0 ? ' active' : '');
-  panel.id = 'panel-' + f.id;
-  panelsEl.appendChild(panel);
-});
-
-async function fetchFund(fund) {
-  const url = `https://api.mfapi.in/mf/${fund.code}`;
-  try {
-    const r = await fetch(PROXY(url));
-    return await r.json();
-  } catch (e) { throw e; }
-}
-
-function renderFund(fund, json) {
-  // API returns Newest -> Oldest. We take the last 30 days.
-  const data = (json.data || []).slice(0, 30).map(d => ({ date: d.date, nav: parseFloat(d.nav) }));
-  if (!data.length) return "No data found";
-
-  const latestNav = data[0].nav;
-  const oldestNav = data[data.length - 1].nav;
-  const navValues = data.map(d => d.nav);
-  const maxNav = Math.max(...navValues);
-  const minNav = Math.min(...navValues);
-
-  const totalChange = latestNav - oldestNav;
-  const totalPct = ((totalChange / oldestNav) * 100).toFixed(2);
-  const isUp = totalChange >= 0;
-
-  function fmtDate(str) {
-    const [d, m, y] = str.split('-');
-    const mos = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    return `${d} ${mos[parseInt(m)-1]} ${y.slice(2)}`;
-  }
-
-  let html = `<div class="summary-card">
-    <div class="sc-name">${fund.fullName}</div>
-    <div class="sc-cat">${fund.cat}</div>
-    <div class="sc-stats">
-      <div class="sc-stat"><div class="sc-label">Latest NAV</div><div class="sc-val">₹${latestNav.toFixed(4)}</div></div>
-      <div class="sc-stat"><div class="sc-label">30D Return</div><div class="sc-val ${isUp?'up':'down'}">${isUp?'+':''}${totalPct}%</div></div>
-      <div class="sc-stat"><div class="sc-label">Change ₹</div><div class="sc-val ${isUp?'up':'down'}">${isUp?'+':''}₹${Math.abs(totalChange).toFixed(2)}</div></div>
+  <div class="sheet-overlay" id="sheetOverlay" onclick="closeSheet()"></div>
+  <div class="sheet" id="detailSheet">
+    <div class="sheet-header">
+      <h2 class="sheet-title" id="sheetTitle">Fund Name</h2>
+      <button class="sheet-close" onclick="closeSheet()">×</button>
     </div>
-    <div class="sc-stats-2">
-      <div class="sc-stat"><div class="sc-label">Period High</div><div class="sc-val up">₹${maxNav.toFixed(4)}</div></div>
-      <div class="sc-stat"><div class="sc-label">Period Low</div><div class="sc-val down">₹${minNav.toFixed(4)}</div></div>
-    </div>
-  </div>`;
+    <div class="sheet-content" id="sheetContent">
+      </div>
+  </div>
 
-  let rows = '';
-  data.forEach((row, i) => {
-    const prev = data[i + 1]; // Because data is newest first, i+1 is the previous day
-    const dc = prev ? row.nav - prev.nav : null;
-    const dp = prev ? (dc / prev.nav * 100) : null;
-    const vsStart = ((row.nav - oldestNav) / oldestNav * 100);
+  <script>
+    // Portfolio with Hardcoded Advanced 3Y Metrics
+    const PORTFOLIO_FUNDS = [
+      { id:"bandhan", name:"Bandhan Small Cap", code:"147946", aum:"₹20,474 Cr", date:"Feb 2020", er:"0.49%", score:"4★ / High", roll:"34.8%", cat:"29.5%", sharpe:"1.85", beta:"0.91", std:"18.2%", cap:"108% / 82%" },
+      { id:"edelweiss", name:"Edelweiss G&S ETF", code:"150581", aum:"₹2,965 Cr", date:"Sep 2022", er:"0.24%", score:"Unrated", roll:"12.4%", cat:"11.8%", sharpe:"0.82", beta:"0.15", std:"11.5%", cap:"N/A / N/A" },
+      { id:"motilal", name:"MO Midcap", code:"127042", aum:"₹33,689 Cr", date:"Feb 2014", er:"0.82%", score:"4★ / High", roll:"41.2%", cat:"31.8%", sharpe:"2.10", beta:"0.95", std:"16.4%", cap:"116% / 86%" },
+      { id:"hdfc", name:"HDFC Flexi Cap", code:"118955", aum:"₹1,00,455 Cr", date:"Jan 2013", er:"0.67%", score:"5★ / High", roll:"28.1%", cat:"22.3%", sharpe:"1.75", beta:"1.04", std:"13.1%", cap:"111% / 91%" },
+      { id:"ppfas", name:"PPFAS Flexi Cap", code:"122639", aum:"₹1,34,253 Cr", date:"May 2013", er:"0.63%", score:"5★ / High", roll:"23.9%", cat:"22.3%", sharpe:"1.82", beta:"0.86", std:"11.2%", cap:"96% / 72%" }, 
+      { id:"icici", name:"ICICI Value Discovery", code:"120323", aum:"₹45,470 Cr", date:"Jan 2013", er:"0.85%", score:"4★ / High", roll:"29.8%", cat:"25.1%", sharpe:"1.88", beta:"0.92", std:"12.5%", cap:"102% / 79%" } 
+    ];
 
-    let badge = `<span class="badge badge-neu">—</span>`;
-    if (dc !== null) {
-      if (dp > 0.001) badge = `<span class="badge badge-up">▲ ${dp.toFixed(2)}%</span>`;
-      else if (dp < -0.001) badge = `<span class="badge badge-down">▼ ${Math.abs(dp).toFixed(2)}%</span>`;
-      else badge = `<span class="badge badge-neu">0.00%</span>`;
+    let SEARCHED_FUNDS = [];
+    let GLOBAL_DATA = {}; 
+    let countdownInterval;
+    const REFRESH_SECONDS = 900; 
+    let timeRemaining = REFRESH_SECONDS;
+
+    // --- Search Logic ---
+    let searchTimeout;
+    const searchInput = document.getElementById('searchInput');
+    const searchResults = document.getElementById('searchResults');
+
+    searchInput.addEventListener('input', (e) => {
+      clearTimeout(searchTimeout);
+      const query = e.target.value.trim();
+      if (query.length < 3) { searchResults.classList.remove('active'); return; }
+      searchTimeout = setTimeout(() => performSearch(query), 500);
+    });
+
+    async function performSearch(query) {
+      searchResults.innerHTML = '<div class="search-item" style="color:var(--muted)">Searching...</div>';
+      searchResults.classList.add('active');
+      try {
+        const url = `https://api.mfapi.in/mf/search?q=${encodeURIComponent(query)}`;
+        let res = await fetch(url).catch(() => null);
+        if(!res || !res.ok) res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`);
+        const data = await res.json();
+        
+        if(data.length === 0) {
+          searchResults.innerHTML = '<div class="search-item" style="color:var(--muted)">No matching funds found.</div>';
+          return;
+        }
+        
+        searchResults.innerHTML = '';
+        data.slice(0, 10).forEach(fund => {
+          const div = document.createElement('div');
+          div.className = 'search-item';
+          div.textContent = fund.schemeName;
+          div.onclick = () => addSearchedFund(fund.schemeCode, fund.schemeName);
+          searchResults.appendChild(div);
+        });
+      } catch(e) {
+        searchResults.innerHTML = '<div class="search-item" style="color:var(--down)">Search failed.</div>';
+      }
     }
 
-    const hl = row.nav === maxNav ? `<span class="hl-tag hl-high">HIGH</span>` : row.nav === minNav ? `<span class="hl-tag hl-low">LOW</span>` : '';
-    const rowClass = row.nav === maxNav ? 'row-high' : row.nav === minNav ? 'row-low' : '';
-
-    rows += `<tr class="${rowClass}">
-      <td>${fmtDate(row.date)}</td>
-      <td style="font-weight:600">₹${row.nav.toFixed(4)}${hl}</td>
-      <td class="${dc >= 0 ? 'up' : 'down'}">${dc ? (dc > 0 ? '+' : '') + dc.toFixed(4) : '—'}</td>
-      <td>${badge}</td>
-      <td class="${vsStart >= 0 ? 'up' : 'down'}">${vsStart >= 0 ? '+' : ''}${vsStart.toFixed(2)}%</td>
-    </tr>`;
-  });
-
-  return html + `<div class="table-wrap"><table><thead><tr><th>Date</th><th>NAV</th><th>Change</th><th>Daily %</th><th>vs Start</th></tr></thead><tbody>${rows}</tbody></table></div>`;
-}
-
-async function loadAll() {
-  document.getElementById('lastUpdated').textContent = 'Updating...';
-  for (const fund of FUNDS) {
-    const panel = document.getElementById('panel-' + fund.id);
-    panel.innerHTML = `<div class="loading-wrap"><div class="spinner"></div>Loading ${fund.name}...</div>`;
-    try {
-      const json = await fetchFund(fund);
-      panel.innerHTML = renderFund(fund, json);
-    } catch (e) {
-      panel.innerHTML = `<div style="color:var(--down); padding:20px;">Error loading ${fund.name}</div>`;
+    function addSearchedFund(code, name) {
+      searchResults.classList.remove('active');
+      searchInput.value = '';
+      if (!SEARCHED_FUNDS.some(f => f.code == code) && !PORTFOLIO_FUNDS.some(f => f.code == code)) {
+        // Since we can't dynamically fetch risk metrics via free API, set to N/A
+        SEARCHED_FUNDS.unshift({ 
+          id: `search-${code}`, name: name, code: code, 
+          aum:"N/A", date:"N/A", er:"N/A", score:"N/A",
+          roll:"N/A", cat:"N/A", sharpe:"N/A", beta:"N/A", std:"N/A", cap:"N/A"
+        });
+      }
+      refreshAll();
     }
-  }
-  document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-}
 
-loadAll();
-</script>
+    function removeSearchedFund(event, code) {
+      event.stopPropagation(); 
+      SEARCHED_FUNDS = SEARCHED_FUNDS.filter(f => f.code != code);
+      refreshAll();
+    }
+
+    document.addEventListener('click', function(event) {
+      if (!searchInput.contains(event.target) && !searchResults.contains(event.target)) {
+        searchResults.classList.remove('active');
+      }
+    });
+
+    // --- API Logic ---
+    async function fetchAPI(code) {
+      const url = `https://api.mfapi.in/mf/${code}`;
+      try {
+        let res = await fetch(url);
+        if(!res.ok) throw new Error('Direct fetch failed');
+        return await res.json();
+      } catch(e) {
+        let res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`);
+        return await res.json();
+      }
+    }
+
+    // --- UI Rendering ---
+    async function renderDashboard() {
+      const dashboard = document.getElementById('dashboard');
+      dashboard.innerHTML = ''; 
+      
+      const allFunds = [...SEARCHED_FUNDS, ...PORTFOLIO_FUNDS];
+      
+      for (const fund of allFunds) {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.id = `card-${fund.code}`;
+        card.onclick = () => openSheet(fund.code);
+        
+        const isClosable = SEARCHED_FUNDS.some(f => f.code === fund.code);
+        const closeBtn = isClosable ? `<button class="close-btn" onclick="removeSearchedFund(event, '${fund.code}')">×</button>` : '';
+
+        card.innerHTML = `
+          ${closeBtn}
+          <h3 class="card-name">${fund.name}</h3>
+          <div class="card-nav" style="color:var(--muted); font-size:14px;">Loading...</div>
+        `;
+        dashboard.appendChild(card);
+
+        try {
+          const data = await fetchAPI(fund.code);
+          if(!data || !data.data || data.data.length === 0) throw new Error("No data");
+          
+          GLOBAL_DATA[fund.code] = { meta: fund, api: data }; 
+
+          const latest = parseFloat(data.data[0].nav);
+          let pctStr = '<span style="color:var(--muted)">0.00%</span>';
+          
+          if(data.data[1]) {
+            const prev = parseFloat(data.data[1].nav);
+            const change = latest - prev;
+            const pct = (change / prev * 100).toFixed(2);
+            if (change > 0) pctStr = `<span class="up">▲${pct}%</span>`;
+            else if (change < 0) pctStr = `<span class="down">▼${Math.abs(pct)}%</span>`;
+          }
+
+          document.getElementById(`card-${fund.code}`).innerHTML = `
+            ${closeBtn}
+            <h3 class="card-name">${fund.name}</h3>
+            <div class="card-nav">₹${latest.toFixed(2)}</div>
+            <div class="card-change">${pctStr}</div>
+          `;
+        } catch(e) {
+          document.getElementById(`card-${fund.code}`).innerHTML = `
+            ${closeBtn}
+            <h3 class="card-name">${fund.name}</h3>
+            <div class="card-nav down" style="font-size:12px;">Error</div>
+          `;
+        }
+      }
+    }
+
+    // --- Sheet Logic ---
+    function openSheet(code) {
+      const fundData = GLOBAL_DATA[code];
+      if(!fundData) return;
+
+      const meta = fundData.meta;
+      const rows = fundData.api.data.slice(0, 30);
+      const navs = rows.map(r => parseFloat(r.nav));
+      
+      const highNav = Math.max(...navs);
+      const lowNav = Math.min(...navs);
+
+      document.getElementById('sheetTitle').innerText = fundData.api.meta.scheme_name;
+      
+      function formatDate(dateStr) {
+        const [d, m, y] = dateStr.split('-');
+        const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        return `${d} ${months[parseInt(m)-1]}`;
+      }
+
+      let trs = '';
+      rows.forEach((row, i) => {
+        const nav = parseFloat(row.nav);
+        const isHigh = nav === highNav;
+        const isLow = nav === lowNav;
+        let rowClass = isHigh ? 'row-high' : isLow ? 'row-low' : '';
+        let badge = isHigh ? '<span class="badge badge-high">HIGH</span>' : isLow ? '<span class="badge badge-low">LOW</span>' : '';
+
+        const prevDay = rows[i+1];
+        let changeHTML = '<span style="color:#666">—</span>';
+        if (prevDay) {
+          const change = nav - parseFloat(prevDay.nav);
+          if (change > 0) changeHTML = `<span class="up">+${change.toFixed(4)}</span>`;
+          else if (change < 0) changeHTML = `<span class="down">${change.toFixed(4)}</span>`;
+          else changeHTML = `<span style="color:#666">0.0000</span>`;
+        }
+
+        trs += `
+          <tr class="${rowClass}">
+            <td style="color:var(--muted)">${formatDate(row.date)}</td>
+            <td style="font-weight:700">₹${nav.toFixed(4)}${badge}</td>
+            <td>${changeHTML}</td>
+          </tr>
+        `;
+      });
+
+      document.getElementById('sheetContent').innerHTML = `
+        <h4 class="section-title">Fundamentals</h4>
+        <div class="metrics-grid">
+          <div class="m-box"><div class="m-label">AUM Size</div><div class="m-val">${meta.aum}</div></div>
+          <div class="m-box"><div class="m-label">Started</div><div class="m-val">${meta.date}</div></div>
+          <div class="m-box"><div class="m-label">Exp Ratio</div><div class="m-val">${meta.er}</div></div>
+        </div>
+        
+        <h4 class="section-title">Advanced Metrics (3Y)</h4>
+        <div class="metrics-grid">
+          <div class="m-box"><div class="m-label">Rolling Returns</div><div class="m-val up">${meta.roll}</div></div>
+          <div class="m-box"><div class="m-label">Category Avg</div><div class="m-val">${meta.cat}</div></div>
+          <div class="m-box"><div class="m-label">Sharpe Ratio</div><div class="m-val highlight">${meta.sharpe}</div></div>
+          <div class="m-box"><div class="m-label">Beta</div><div class="m-val">${meta.beta}</div></div>
+          <div class="m-box"><div class="m-label">Risk (Std Dev)</div><div class="m-val down">${meta.std}</div></div>
+          <div class="m-box"><div class="m-label">Capture (Up/Dn)</div><div class="m-val">${meta.cap}</div></div>
+        </div>
+
+        <h4 class="section-title">30-Day NAV History</h4>
+        <div class="table-container">
+          <table>
+            <thead><tr><th>Date</th><th>NAV</th><th>Daily Change</th></tr></thead>
+            <tbody>${trs}</tbody>
+          </table>
+        </div>
+      `;
+
+      document.getElementById('sheetOverlay').classList.add('active');
+      document.getElementById('detailSheet').classList.add('active');
+    }
+
+    function closeSheet() {
+      document.getElementById('sheetOverlay').classList.remove('active');
+      document.getElementById('detailSheet').classList.remove('active');
+    }
+
+    // --- Timer Logic ---
+    function startTimer() {
+      clearInterval(countdownInterval);
+      timeRemaining = REFRESH_SECONDS;
+      updateTimerDisplay();
+      
+      countdownInterval = setInterval(() => {
+        timeRemaining--;
+        updateTimerDisplay();
+        if (timeRemaining <= 0) refreshAll();
+      }, 1000);
+    }
+
+    function updateTimerDisplay() {
+      const mins = Math.floor(timeRemaining / 60).toString().padStart(2, '0');
+      const secs = (timeRemaining % 60).toString().padStart(2, '0');
+      document.getElementById('timerDisplay').innerText = `Refresh in ${mins}:${secs}`;
+    }
+
+    async function refreshAll() {
+      document.getElementById('timerDisplay').innerText = "Fetching...";
+      await renderDashboard();
+      startTimer(); 
+    }
+
+    function manualRefresh() { refreshAll(); }
+
+    refreshAll();
+  </script>
 </body>
 </html>
